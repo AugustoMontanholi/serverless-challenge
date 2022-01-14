@@ -1,0 +1,94 @@
+service: serverlesschallenge
+
+plugins:
+  - serverless-offline
+  - serverless-webpack
+  - serverless-dynamodb-local
+
+custom:
+  webpack:
+    webpackConfig: ./webpack.config.js
+    includeModules: true
+  dynamodb:
+    stages:
+      - dev
+      - local
+    start:
+      port: 8000
+      inMemory: true
+      migrate: true
+  bucket: serverlesschallenge
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+  region: us-east-1
+  lambdaHashingVersion: 20201221
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:DeleteItem
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - s3:*
+          Resource: "*"
+
+functions:
+  list:
+    handler: src/functions/users/list.handle
+    events:
+      - http:
+          path: /users
+          method: GET
+          cors: true
+  create:
+    handler: src/functions/users/create.handle
+    events:
+      - http:
+          path: /users
+          method: POST
+          cors: true
+  show:
+    handler: src/functions/users/show.handle
+    events:
+      - http:
+          path: /users/{id}
+          method: GET
+          cors: true
+  update:
+    handler: src/functions/users/update.handle
+    events:
+      - http:
+          path: /users/{id}
+          method: PUT
+          cors: true
+  delete:
+    handler: src/functions/users/delete.handle
+    events:
+      - http:
+          path: /users/{id}
+          method: DELETE
+          cors: true
+
+resources:
+  Resources:
+    dbUsers:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        TableName: users
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
